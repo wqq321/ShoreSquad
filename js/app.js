@@ -14,6 +14,12 @@ const CONFIG = {
         CREW: 'shorerquad_crew',
         EVENTS: 'shorerquad_events',
         LOCATION: 'shorerquad_location'
+    },
+    NEXT_CLEANUP: {
+        NAME: 'Pasir Ris, Singapore',
+        LATITUDE: 1.381497,
+        LONGITUDE: 103.955574,
+        DESCRIPTION: 'Street View Asia - Pasir Ris Beach Park'
     }
 };
 

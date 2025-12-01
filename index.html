@@ -148,8 +148,29 @@
         <!-- Map Section -->
         <section id="map" class="map-section" aria-label="Interactive Beach Map">
             <h2>Beach Cleanup Map</h2>
-            <div class="map-container" id="map" role="region" aria-label="Interactive map showing beaches and cleanup events">
-                <p class="placeholder-text">Interactive map loading...</p>
+            <div class="map-info-card">
+                <h3>🌍 Next Cleanup Location</h3>
+                <p><strong>Spot:</strong> Pasir Ris, Singapore</p>
+                <p><strong>Coordinates:</strong> 1.381497°N, 103.955574°E</p>
+                <p><strong>Status:</strong> <span class="status-badge">Scheduled</span></p>
+            </div>
+            <div class="map-container" id="map" role="region" aria-label="Google Map showing Pasir Ris cleanup location">
+                <iframe 
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.820860193147!2d103.95557399999999!3d1.381497!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da17f3c0e4d5b9%3A0x7e3d5b2d4c1b5a8f!2sPasir%20Ris%20Beach%20Park!5e0!3m2!1sen!2ssg!4v1701374400000!5m2!1sen!2ssg"
+                    width="100%"
+                    height="100%"
+                    style="border:0;" 
+                    allowfullscreen="" 
+                    loading="lazy" 
+                    referrerpolicy="no-referrer-when-downgrade"
+                    title="Pasir Ris Beach - Next Cleanup Location"
+                    aria-label="Google Map showing Pasir Ris Beach cleanup location at coordinates 1.381497, 103.955574">
+                </iframe>
+                <div class="map-overlay">
+                    <div class="cleanup-marker">
+                    📍 Next Cleanup
+                    </div>
+                </div>
             </div>
         </section>
 
