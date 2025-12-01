@@ -9,7 +9,6 @@
 
 const CONFIG = {
     NEA_API: 'https://api.data.gov.sg/v1/environment/4-day-weather-forecast',
-    NEA_REALTIME: 'https://api.data.gov.sg/v1/environment/realtime-weather-readings',
     GEOLOCATION_TIMEOUT: 10000,
     STORAGE_KEYS: {
         CREW: 'shorerquad_crew',
@@ -130,32 +129,13 @@ async function fetchNEAForecast() {
     try {
         const response = await fetch(CONFIG.NEA_API);
         if (!response.ok) {
-            throw new Error('Failed to fetch NEA forecast data');
+            throw new Error(`HTTP ${response.status}: Failed to fetch NEA forecast data`);
         }
         const data = await response.json();
         return data;
     } catch (error) {
         console.error('NEA Forecast API Error:', error);
         throw new Error(`Failed to fetch weather: ${error.message}`);
-    }
-}
-
-/**
- * Fetch real-time weather readings from NEA API
- * Returns current temperature and humidity for Singapore
- * @returns {Promise<Object>} Real-time weather data
- */
-async function fetchNEARealtimeWeather() {
-    try {
-        const response = await fetch(CONFIG.NEA_REALTIME);
-        if (!response.ok) {
-            throw new Error('Failed to fetch NEA real-time data');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('NEA Real-time API Error:', error);
-        throw new Error(`Failed to fetch real-time weather: ${error.message}`);
     }
 }
 
@@ -176,56 +156,20 @@ function getWeatherEmoji(condition) {
 
 /**
  * Display weather information in the DOM with metric units
- * Shows current weather and 4-day forecast
+ * Shows 4-day forecast from NEA
  */
 async function displayWeatherForecast() {
     try {
-        showMessage(DOM.weatherDisplay, '🔄 Loading weather data...', 'loading');
+        showMessage(DOM.weatherDisplay, '🔄 Loading weather data from NEA...', 'loading');
 
-        const [forecastData, realtimeData] = await Promise.all([
-            fetchNEAForecast(),
-            fetchNEARealtimeWeather()
-        ]);
-
-        // Get current readings
-        const currentReadings = realtimeData.items[0].readings;
-        const stations = realtimeData.items[0].stations;
-        
-        // Find Pasir Ris station or use first available
-        let currentTemp = null;
-        let currentHumidity = null;
-        
-        if (stations && stations.length > 0) {
-            const pasirRisStation = Object.keys(currentReadings).find(key => 
-                key.toLowerCase().includes('pasir ris') || 
-                key.toLowerCase().includes('pasir') ||
-                key.toLowerCase().includes('changi')
-            ) || Object.keys(currentReadings)[0];
-            
-            currentTemp = currentReadings[pasirRisStation]?.air_temperature;
-            currentHumidity = currentReadings[pasirRisStation]?.relative_humidity;
-        }
+        const forecastData = await fetchNEAForecast();
 
         // Build forecast HTML
         let forecastHTML = '';
-        
-        // Current weather section
-        if (currentTemp !== null) {
-            forecastHTML += `
-                <div class="current-weather">
-                    <h3>Current Conditions - Singapore</h3>
-                    <div class="current-icon">${getWeatherEmoji('clear')}</div>
-                    <div class="current-temp">${currentTemp}°C</div>
-                    <div class="current-desc">
-                        ${currentHumidity !== null ? `Humidity: ${currentHumidity}%` : 'Real-time conditions'}
-                    </div>
-                </div>
-            `;
-        }
 
         // 4-day forecast section
         if (forecastData.items && forecastData.items.length > 0) {
-            forecastHTML += '<div class="forecast-header"><h3>4-Day Forecast</h3></div>';
+            forecastHTML += '<div class="forecast-header"><h3>4-Day Forecast - Singapore</h3></div>';
             forecastHTML += '<div class="weather-grid">';
 
             forecastData.items.forEach((item, index) => {
@@ -238,13 +182,14 @@ async function displayWeatherForecast() {
 
                 const forecasts = item.forecasts;
                 if (forecasts && forecasts.length > 0) {
+                    // Show general forecast (covers entire Singapore)
                     const forecast = forecasts[0];
                     
-                    // Calculate average temperature if high and low exist
-                    const tempDisplay = forecast.temperature 
-                        ? `${forecast.temperature}°C`
-                        : forecast.high && forecast.low
+                    // Get temperature range
+                    const tempDisplay = forecast.high && forecast.low
                         ? `${forecast.low}-${forecast.high}°C`
+                        : forecast.temperature 
+                        ? `${forecast.temperature}°C`
                         : 'N/A';
 
                     forecastHTML += `
@@ -264,6 +209,8 @@ async function displayWeatherForecast() {
             });
 
             forecastHTML += '</div>';
+        } else {
+            throw new Error('No forecast data available');
         }
 
         // Add data attribution
@@ -272,6 +219,7 @@ async function displayWeatherForecast() {
                 <p style="font-size: 0.85rem; color: #666; margin: 0;">
                     🏢 Data provided by NEA (National Environment Agency, Singapore)
                     <br><a href="https://data.gov.sg" style="color: #0066CC;" target="_blank">data.gov.sg</a>
+                    <br><em style="font-size: 0.8rem;">Updated: ${new Date().toLocaleTimeString('en-SG')}</em>
                 </p>
             </div>
         `;
