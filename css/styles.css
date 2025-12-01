@@ -1,5 +1,11 @@
 /* ========================================
    ShoreSquad - Responsive CSS Stylesheet
+   Unit System:
+   - Layout & Dimensions: Pixels (px) - CSS standard
+   - Responsive: Media queries at 480px, 768px, 1024px breakpoints
+   - Weather Data: Metric (°C, km/h, mm) - see app.js
+   - Coordinates: Decimal degrees (latitude/longitude)
+   
    Color Palette:
    - Primary: #0066CC (Ocean Blue)
    - Accent: #FF6B35 (Vibrant Orange)

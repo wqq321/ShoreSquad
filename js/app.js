@@ -71,7 +71,7 @@ function initMobileMenu() {
 
 /**
  * Get user's current location using Geolocation API
- * @returns {Promise<Object>} Location object with latitude and longitude
+ * @returns {Promise<Object>} Location object with latitude, longitude, and accuracy in meters
  */
 function getCurrentLocation() {
     return new Promise((resolve, reject) => {
@@ -85,7 +85,7 @@ function getCurrentLocation() {
                 resolve({
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy
+                    accuracy: position.coords.accuracy  // in meters
                 });
             },
             error => {
@@ -120,8 +120,13 @@ async function requestLocationPermission() {
 
 /**
  * Fetch weather data from Open-Meteo API
+ * All values returned are in metric units:
+ * - Temperature: Celsius (°C)
+ * - Wind Speed: km/h
+ * - Precipitation: millimeters (mm)
+ * - Humidity: percentage (%)
  * @param {string} location - Beach location name
- * @returns {Promise<Object>} Weather data
+ * @returns {Promise<Object>} Weather data in metric units
  */
 async function fetchWeather(location) {
     try {
@@ -208,7 +213,8 @@ async function handleWeatherSearch() {
 }
 
 /**
- * Render weather data to DOM
+ * Render weather data to DOM with metric units
+ * Displays temperature in Celsius (°C), wind speed in km/h, and precipitation in mm
  */
 function displayWeather(weather) {
     const weatherHTML = `
