@@ -173,24 +173,65 @@ async function displayWeatherForecast() {
             forecastHTML += '<div class="weather-grid">';
 
             forecastData.items.forEach((item, index) => {
-                const date = new Date(item.valid_date);
-                const dateStr = date.toLocaleDateString('en-SG', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
-
                 const forecasts = item.forecasts;
                 if (forecasts && forecasts.length > 0) {
-                    // Show general forecast (covers entire Singapore)
+                    // Process first forecast for this date
                     const forecast = forecasts[0];
                     
-                    // Get temperature range
-                    const tempDisplay = forecast.high && forecast.low
-                        ? `${forecast.low}-${forecast.high}°C`
-                        : forecast.temperature 
-                        ? `${forecast.temperature}°C`
-                        : 'N/A';
+                    // Extract date - can be string or object
+                    const dateValue = typeof forecast.date === 'string' 
+                        ? forecast.date 
+                        : forecast.date?.toString() || new Date().toISOString().split('T')[0];
+                    
+                    const date = new Date(dateValue + 'T00:00:00');
+                    const dateStr = date.toLocaleDateString('en-SG', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+
+                    // Extract temperature - handle nested object
+                    let tempDisplay = 'N/A';
+                    if (forecast.temperature) {
+                        if (forecast.temperature.low && forecast.temperature.high) {
+                            tempDisplay = `${forecast.temperature.low}-${forecast.temperature.high}°C`;
+                        } else if (typeof forecast.temperature === 'number') {
+                            tempDisplay = `${forecast.temperature}°C`;
+                        }
+                    }
+
+                    // Extract humidity - handle nested object
+                    let humidityDisplay = '';
+                    if (forecast.relative_humidity) {
+                        if (forecast.relative_humidity.low && forecast.relative_humidity.high) {
+                            humidityDisplay = `${forecast.relative_humidity.low}-${forecast.relative_humidity.high}%`;
+                        } else if (typeof forecast.relative_humidity === 'number') {
+                            humidityDisplay = `${forecast.relative_humidity}%`;
+                        }
+                    }
+
+                    // Extract wind data - handle nested object and string issues
+                    let windDirection = '';
+                    let windSpeed = '';
+                    
+                    if (forecast.wind) {
+                        windDirection = forecast.wind.direction || '';
+                        
+                        // Handle wind speed which might be string or object
+                        if (forecast.wind.speed) {
+                            if (typeof forecast.wind.speed === 'string') {
+                                // Try to parse if it's a string representation of an object
+                                const speedMatch = forecast.wind.speed.match(/(\d+)/g);
+                                if (speedMatch && speedMatch.length >= 2) {
+                                    windSpeed = `${speedMatch[0]}-${speedMatch[1]} km/h`;
+                                } else {
+                                    windSpeed = forecast.wind.speed;
+                                }
+                            } else if (forecast.wind.speed.low && forecast.wind.speed.high) {
+                                windSpeed = `${forecast.wind.speed.low}-${forecast.wind.speed.high} km/h`;
+                            }
+                        }
+                    }
 
                     forecastHTML += `
                         <div class="weather-card">
@@ -199,9 +240,9 @@ async function displayWeatherForecast() {
                             <div class="weather-temp">${tempDisplay}</div>
                             <div class="weather-desc">${forecast.forecast || 'Scattered showers'}</div>
                             <div class="weather-details">
-                                ${forecast.wind_direction ? `<div class="weather-detail-item"><span class="weather-detail-label">Wind:</span> ${forecast.wind_direction}</div>` : ''}
-                                ${forecast.wind_speed ? `<div class="weather-detail-item"><span class="weather-detail-label">Speed:</span> ${forecast.wind_speed} km/h</div>` : ''}
-                                ${forecast.relative_humidity ? `<div class="weather-detail-item"><span class="weather-detail-label">Humidity:</span> ${forecast.relative_humidity}%</div>` : ''}
+                                ${windDirection ? `<div class="weather-detail-item"><span class="weather-detail-label">Wind:</span> ${windDirection}</div>` : ''}
+                                ${windSpeed ? `<div class="weather-detail-item"><span class="weather-detail-label">Speed:</span> ${windSpeed}</div>` : ''}
+                                ${humidityDisplay ? `<div class="weather-detail-item"><span class="weather-detail-label">Humidity:</span> ${humidityDisplay}</div>` : ''}
                             </div>
                         </div>
                     `;
