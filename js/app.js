@@ -8,7 +8,8 @@
 // ========================================
 
 const CONFIG = {
-    WEATHER_API: 'https://api.open-meteo.com/v1/forecast',
+    NEA_API: 'https://api.data.gov.sg/v1/environment/4-day-weather-forecast',
+    NEA_REALTIME: 'https://api.data.gov.sg/v1/environment/realtime-weather-readings',
     GEOLOCATION_TIMEOUT: 10000,
     STORAGE_KEYS: {
         CREW: 'shorerquad_crew',
@@ -31,9 +32,8 @@ const DOM = {
     menuToggle: document.getElementById('menu-toggle'),
     navLinks: document.getElementById('nav-links'),
     getStartedBtn: document.getElementById('get-started'),
-    weatherInput: document.getElementById('weather-location'),
-    weatherBtn: document.getElementById('fetch-weather'),
     weatherDisplay: document.getElementById('weather-display'),
+    refreshWeatherBtn: document.getElementById('refresh-weather'),
     crewList: document.getElementById('crew-list'),
     createCrewBtn: document.getElementById('create-crew'),
     joinCrewBtn: document.getElementById('join-crew'),
@@ -119,152 +119,177 @@ async function requestLocationPermission() {
 // ========================================
 
 /**
- * Fetch weather data from Open-Meteo API
+ * Fetch 4-day weather forecast from NEA API
  * All values returned are in metric units:
  * - Temperature: Celsius (°C)
  * - Wind Speed: km/h
- * - Precipitation: millimeters (mm)
  * - Humidity: percentage (%)
- * @param {string} location - Beach location name
- * @returns {Promise<Object>} Weather data in metric units
+ * @returns {Promise<Object>} 4-day forecast data
  */
-async function fetchWeather(location) {
+async function fetchNEAForecast() {
     try {
-        // Geocode the location to get coordinates
-        const geoResponse = await fetch(
-            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`
-        );
-        const geoData = await geoResponse.json();
-
-        if (!geoData.results || geoData.results.length === 0) {
-            throw new Error('Location not found');
+        const response = await fetch(CONFIG.NEA_API);
+        if (!response.ok) {
+            throw new Error('Failed to fetch NEA forecast data');
         }
-
-        const { latitude, longitude, name, country } = geoData.results[0];
-
-        // Fetch weather for the location
-        const weatherResponse = await fetch(
-            `${CONFIG.WEATHER_API}?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m,precipitation,relative_humidity_2m&timezone=auto`
-        );
-        const weatherData = await weatherResponse.json();
-
-        return {
-            location: `${name}, ${country}`,
-            ...weatherData.current,
-            timezone: weatherData.timezone
-        };
+        const data = await response.json();
+        return data;
     } catch (error) {
+        console.error('NEA Forecast API Error:', error);
         throw new Error(`Failed to fetch weather: ${error.message}`);
     }
 }
 
 /**
- * Interpret WMO weather codes
- * @param {number} code - WMO weather code
- * @returns {string} Weather description
+ * Fetch real-time weather readings from NEA API
+ * Returns current temperature and humidity for Singapore
+ * @returns {Promise<Object>} Real-time weather data
  */
-function getWeatherDescription(code) {
-    const weatherCodes = {
-        0: 'Clear sky',
-        1: 'Mainly clear',
-        2: 'Partly cloudy',
-        3: 'Overcast',
-        45: 'Foggy',
-        48: 'Depositing rime fog',
-        51: 'Light drizzle',
-        53: 'Moderate drizzle',
-        55: 'Dense drizzle',
-        61: 'Slight rain',
-        63: 'Moderate rain',
-        65: 'Heavy rain',
-        71: 'Slight snow',
-        73: 'Moderate snow',
-        75: 'Heavy snow',
-        80: 'Slight rain showers',
-        81: 'Moderate rain showers',
-        82: 'Violent rain showers',
-        85: 'Slight snow showers',
-        86: 'Heavy snow showers',
-        95: 'Thunderstorm',
-        96: 'Thunderstorm with slight hail',
-        99: 'Thunderstorm with heavy hail'
-    };
-    return weatherCodes[code] || 'Unknown conditions';
-}
-
-/**
- * Display weather information in the DOM
- */
-async function handleWeatherSearch() {
-    const location = DOM.weatherInput.value.trim();
-    if (!location) {
-        showMessage(DOM.weatherDisplay, 'Please enter a location', 'error');
-        return;
-    }
-
-    showMessage(DOM.weatherDisplay, 'Loading weather data...', 'loading');
-
+async function fetchNEARealtimeWeather() {
     try {
-        const weather = await fetchWeather(location);
-        displayWeather(weather);
+        const response = await fetch(CONFIG.NEA_REALTIME);
+        if (!response.ok) {
+            throw new Error('Failed to fetch NEA real-time data');
+        }
+        const data = await response.json();
+        return data;
     } catch (error) {
-        showMessage(DOM.weatherDisplay, `Error: ${error.message}`, 'error');
+        console.error('NEA Real-time API Error:', error);
+        throw new Error(`Failed to fetch real-time weather: ${error.message}`);
     }
 }
 
 /**
- * Render weather data to DOM with metric units
- * Displays temperature in Celsius (°C), wind speed in km/h, and precipitation in mm
+ * Get emoji for weather condition
  */
-function displayWeather(weather) {
-    const weatherHTML = `
-        <div style="text-align: center; padding: 20px;">
-            <h3>${weather.location}</h3>
-            <div style="font-size: 3rem; margin: 20px 0;">
-                ${getWeatherEmoji(weather.weather_code)}
-            </div>
-            <p style="font-size: 1.5rem; font-weight: bold; color: #0066CC;">
-                ${weather.temperature_2m}°C
-            </p>
-            <p style="font-size: 1.1rem; margin: 10px 0;">
-                ${getWeatherDescription(weather.weather_code)}
-            </p>
-            <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div>
-                    <p style="margin: 0; font-weight: 600;">Wind Speed</p>
-                    <p style="margin: 5px 0; color: #666;">${weather.wind_speed_10m} km/h</p>
-                </div>
-                <div>
-                    <p style="margin: 0; font-weight: 600;">Humidity</p>
-                    <p style="margin: 5px 0; color: #666;">${weather.relative_humidity_2m}%</p>
-                </div>
-                <div>
-                    <p style="margin: 0; font-weight: 600;">Precipitation</p>
-                    <p style="margin: 5px 0; color: #666;">${weather.precipitation} mm</p>
-                </div>
-                <div>
-                    <p style="margin: 0; font-weight: 600;">Timezone</p>
-                    <p style="margin: 5px 0; color: #666;">${weather.timezone}</p>
-                </div>
-            </div>
-            <p style="margin-top: 20px; color: #2ECC71; font-weight: 600;">
-                ✓ Great conditions for a beach cleanup!
-            </p>
-        </div>
-    `;
-    DOM.weatherDisplay.innerHTML = weatherHTML;
+function getWeatherEmoji(condition) {
+    const conditionLower = condition.toLowerCase();
+    if (conditionLower.includes('rain') || conditionLower.includes('showers')) return '🌧️';
+    if (conditionLower.includes('cloud')) return '☁️';
+    if (conditionLower.includes('clear') || conditionLower.includes('sunny')) return '☀️';
+    if (conditionLower.includes('storm') || conditionLower.includes('thunder')) return '⛈️';
+    if (conditionLower.includes('snow')) return '❄️';
+    if (conditionLower.includes('wind')) return '🌪️';
+    if (conditionLower.includes('fog') || conditionLower.includes('haze')) return '🌫️';
+    return '🌤️';
 }
 
 /**
- * Get emoji for weather code
+ * Display weather information in the DOM with metric units
+ * Shows current weather and 4-day forecast
  */
-function getWeatherEmoji(code) {
-    if (code === 0) return '☀️';
-    if (code <= 3) return '⛅';
-    if (code <= 48) return '🌫️';
-    if (code <= 67) return '🌧️';
-    if (code <= 86) return '❄️';
-    return '⛈️';
+async function displayWeatherForecast() {
+    try {
+        showMessage(DOM.weatherDisplay, '🔄 Loading weather data...', 'loading');
+
+        const [forecastData, realtimeData] = await Promise.all([
+            fetchNEAForecast(),
+            fetchNEARealtimeWeather()
+        ]);
+
+        // Get current readings
+        const currentReadings = realtimeData.items[0].readings;
+        const stations = realtimeData.items[0].stations;
+        
+        // Find Pasir Ris station or use first available
+        let currentTemp = null;
+        let currentHumidity = null;
+        
+        if (stations && stations.length > 0) {
+            const pasirRisStation = Object.keys(currentReadings).find(key => 
+                key.toLowerCase().includes('pasir ris') || 
+                key.toLowerCase().includes('pasir') ||
+                key.toLowerCase().includes('changi')
+            ) || Object.keys(currentReadings)[0];
+            
+            currentTemp = currentReadings[pasirRisStation]?.air_temperature;
+            currentHumidity = currentReadings[pasirRisStation]?.relative_humidity;
+        }
+
+        // Build forecast HTML
+        let forecastHTML = '';
+        
+        // Current weather section
+        if (currentTemp !== null) {
+            forecastHTML += `
+                <div class="current-weather">
+                    <h3>Current Conditions - Singapore</h3>
+                    <div class="current-icon">${getWeatherEmoji('clear')}</div>
+                    <div class="current-temp">${currentTemp}°C</div>
+                    <div class="current-desc">
+                        ${currentHumidity !== null ? `Humidity: ${currentHumidity}%` : 'Real-time conditions'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 4-day forecast section
+        if (forecastData.items && forecastData.items.length > 0) {
+            forecastHTML += '<div class="forecast-header"><h3>4-Day Forecast</h3></div>';
+            forecastHTML += '<div class="weather-grid">';
+
+            forecastData.items.forEach((item, index) => {
+                const date = new Date(item.valid_date);
+                const dateStr = date.toLocaleDateString('en-SG', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+
+                const forecasts = item.forecasts;
+                if (forecasts && forecasts.length > 0) {
+                    const forecast = forecasts[0];
+                    
+                    // Calculate average temperature if high and low exist
+                    const tempDisplay = forecast.temperature 
+                        ? `${forecast.temperature}°C`
+                        : forecast.high && forecast.low
+                        ? `${forecast.low}-${forecast.high}°C`
+                        : 'N/A';
+
+                    forecastHTML += `
+                        <div class="weather-card">
+                            <div class="weather-date">${dateStr}</div>
+                            <div class="weather-icon">${getWeatherEmoji(forecast.forecast || '')}</div>
+                            <div class="weather-temp">${tempDisplay}</div>
+                            <div class="weather-desc">${forecast.forecast || 'Scattered showers'}</div>
+                            <div class="weather-details">
+                                ${forecast.wind_direction ? `<div class="weather-detail-item"><span class="weather-detail-label">Wind:</span> ${forecast.wind_direction}</div>` : ''}
+                                ${forecast.wind_speed ? `<div class="weather-detail-item"><span class="weather-detail-label">Speed:</span> ${forecast.wind_speed} km/h</div>` : ''}
+                                ${forecast.relative_humidity ? `<div class="weather-detail-item"><span class="weather-detail-label">Humidity:</span> ${forecast.relative_humidity}%</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            forecastHTML += '</div>';
+        }
+
+        // Add data attribution
+        forecastHTML += `
+            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+                <p style="font-size: 0.85rem; color: #666; margin: 0;">
+                    🏢 Data provided by NEA (National Environment Agency, Singapore)
+                    <br><a href="https://data.gov.sg" style="color: #0066CC;" target="_blank">data.gov.sg</a>
+                </p>
+            </div>
+        `;
+
+        DOM.weatherDisplay.innerHTML = forecastHTML;
+    } catch (error) {
+        console.error('Error displaying weather:', error);
+        showMessage(DOM.weatherDisplay, 
+            `⚠️ ${error.message}. Please try refreshing.`, 
+            'error');
+    }
+}
+
+/**
+ * Handle weather refresh button click
+ */
+function handleWeatherRefresh() {
+    displayWeatherForecast();
 }
 
 // ========================================
@@ -494,17 +519,9 @@ function initEventListeners() {
         });
     }
 
-    // Weather search with debounce
-    if (DOM.weatherBtn) {
-        DOM.weatherBtn.addEventListener('click', debounce(handleWeatherSearch, 300));
-    }
-
-    if (DOM.weatherInput) {
-        DOM.weatherInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleWeatherSearch();
-            }
-        });
+    // Weather refresh
+    if (DOM.refreshWeatherBtn) {
+        DOM.refreshWeatherBtn.addEventListener('click', debounce(handleWeatherRefresh, 300));
     }
 
     // Crew management
@@ -572,6 +589,11 @@ function initApp() {
 
     // Display crews
     displayCrews();
+
+    // Load weather forecast on startup
+    setTimeout(() => {
+        displayWeatherForecast();
+    }, 500);
 
     // Request location permission on page load
     setTimeout(() => {

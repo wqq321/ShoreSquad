@@ -115,20 +115,16 @@
 
         <!-- Weather Section -->
         <section id="weather" class="weather" aria-label="Beach Weather Information">
-            <h2>Check the Forecast</h2>
-            <div class="weather-controls">
-                <input 
-                    type="text" 
-                    id="weather-location" 
-                    placeholder="Enter beach location (e.g., Sunset Beach, CA)"
-                    aria-label="Enter beach location for weather"
-                    class="input-field"
-                >
-                <button class="cta-button primary" id="fetch-weather">Get Weather</button>
+            <h2>Singapore Weather Forecast</h2>
+            <div class="weather-info">
+                <p class="weather-note">Real-time weather data powered by NEA (National Environment Agency)</p>
             </div>
             <div class="weather-display" id="weather-display">
-                <p class="placeholder-text">Enter a location and click "Get Weather" to see the forecast</p>
+                <div class="weather-loading">
+                    <p>🔄 Loading live weather data...</p>
+                </div>
             </div>
+            <button class="cta-button primary" id="refresh-weather" style="display: block; margin: 20px auto 0;">Refresh Weather</button>
         </section>
 
         <!-- Crew Section -->
